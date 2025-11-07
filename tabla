@@ -1,0 +1,45 @@
+-- 1. Tabla de HÉROES
+CREATE TABLE heroes (
+    id INTEGER PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    clase TEXT NOT NULL,
+    nivel_experiencia INTEGER NOT NULL CHECK (nivel_experiencia >= 1)
+);
+
+-- 2. Tabla de MISIONES
+CREATE TABLE misiones (
+    id INTEGER PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    localizacion TEXT NOT NULL,
+    dificultad TEXT NOT NULL CHECK (dificultad IN ('Fácil', 'Media', 'Difícil', 'Épica')),
+    recompensa_oro INTEGER NOT NULL CHECK (recompensa_oro >= 0)
+);
+
+-- 3. Tabla de MONSTRUOS
+CREATE TABLE monstruos (
+    id INTEGER PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    tipo TEXT NOT NULL,
+    nivel_amenaza INTEGER NOT NULL CHECK (nivel_amenaza BETWEEN 1 AND 10)
+);
+
+-- 4. Tabla Puente: MISIONES_HÉROES (Relación Muchos a Muchos: Participación)
+-- Un héroe participa en muchas misiones, una misión tiene muchos héroes.
+CREATE TABLE misiones_heroes (
+    mision_id INTEGER NOT NULL,
+    heroe_id INTEGER NOT NULL,
+    PRIMARY KEY (mision_id, heroe_id),
+    FOREIGN KEY (mision_id) REFERENCES misiones (id) ON DELETE CASCADE,
+    FOREIGN KEY (heroe_id) REFERENCES heroes (id) ON DELETE CASCADE
+);
+
+-- 5. Tabla Puente: MISIONES_MONSTRUOS (Relación Muchos a Muchos: Enfrentamiento)
+-- Una misión enfrenta a muchos monstruos, un monstruo aparece en muchas misiones.
+CREATE TABLE misiones_monstruos (
+    mision_id INTEGER NOT NULL,
+    monstruo_id INTEGER NOT NULL,
+    cantidad INTEGER NOT NULL CHECK (cantidad >= 1),
+    PRIMARY KEY (mision_id, monstruo_id),
+    FOREIGN KEY (mision_id) REFERENCES misiones (id) ON DELETE CASCADE,
+    FOREIGN KEY (monstruo_id) REFERENCES monstruos (id) ON DELETE CASCADE
+);

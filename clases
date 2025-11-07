@@ -1,103 +1,150 @@
 import sqlite3
 from sqlite3 import Error
-import os
 
-DATABASE_NAME = "gremio_aventuras.db"
 
-SQL_CREATE_HEROES_TABLE = """
-CREATE TABLE IF NOT EXISTS heroes (
-    id INTEGER PRIMARY KEY,
-    nombre TEXT NOT NULL,
-    clase TEXT NOT NULL,
-    nivel_experiencia INTEGER NOT NULL CHECK (nivel_experiencia >= 1)
-);
-"""
-
-SQL_CREATE_MISIONES_TABLE = """
-CREATE TABLE IF NOT EXISTS misiones (
-    id INTEGER PRIMARY KEY,
-    nombre TEXT NOT NULL,
-    localizacion TEXT NOT NULL,
-    dificultad TEXT NOT NULL CHECK (dificultad IN ('Fácil', 'Media', 'Difícil', 'Épica')),
-    recompensa_oro INTEGER NOT NULL CHECK (recompensa_oro >= 0)
-);
-"""
-
-SQL_CREATE_MONSTRUOS_TABLE = """
-CREATE TABLE IF NOT EXISTS monstruos (
-    id INTEGER PRIMARY KEY,
-    nombre TEXT NOT NULL,
-    tipo TEXT NOT NULL,
-    nivel_amenaza INTEGER NOT NULL CHECK (nivel_amenaza BETWEEN 1 AND 10)
-);
-"""
-
-SQL_CREATE_MISIONES_HEROES_TABLE = """
-CREATE TABLE IF NOT EXISTS misiones_heroes (
-    mision_id INTEGER NOT NULL,
-    heroe_id INTEGER NOT NULL,
-    PRIMARY KEY (mision_id, heroe_id),
-    FOREIGN KEY (mision_id) REFERENCES misiones (id) ON DELETE CASCADE,
-    FOREIGN KEY (heroe_id) REFERENCES heroes (id) ON DELETE CASCADE
-);
-"""
-
-SQL_CREATE_MISIONES_MONSTRUOS_TABLE = """
-CREATE TABLE IF NOT EXISTS misiones_monstruos (
-    mision_id INTEGER NOT NULL,
-    monstruo_id INTEGER NOT NULL,
-    cantidad INTEGER NOT NULL CHECK (cantidad >= 1),
-    PRIMARY KEY (mision_id, monstruo_id),
-    FOREIGN KEY (mision_id) REFERENCES misiones (id) ON DELETE CASCADE,
-    FOREIGN KEY (monstruo_id) REFERENCES monstruos (id) ON DELETE CASCADE
-);
-"""
-
-def create_connection(db_file):
-    """Crea una conexión a la base de datos SQLite especificada."""
-    conn = None
+def insert_hero(conn, hero):
+    """Inserta un nuevo héroe en la tabla heroes."""
+    sql = ''' INSERT INTO heroes(nombre, clase, nivel_experiencia)
+              VALUES(?, ?, ?) '''
+    cur = conn.cursor()
     try:
-        conn = sqlite3.connect(db_file)
-        return conn
+        cur.execute(sql, hero)
+        conn.commit()
+        print(f" Héroe '{hero[0]}' insertado con ID: {cur.lastrowid}")
+        return cur.lastrowid
     except Error as e:
-        print(f"Error al conectar a SQLite: {e}")
+        print(f" Error al insertar héroe: {e}")
         return None
 
-def create_tables(conn):
-    """Crea todas las tablas utilizando las sentencias SQL definidas."""
-    if conn is not None:
-        try:
-            cursor = conn.cursor()
-            
-            cursor.execute(SQL_CREATE_HEROES_TABLE)
-            cursor.execute(SQL_CREATE_MISIONES_TABLE)
-            cursor.execute(SQL_CREATE_MONSTRUOS_TABLE)
-            cursor.execute(SQL_CREATE_MISIONES_HEROES_TABLE)
-            cursor.execute(SQL_CREATE_MISIONES_MONSTRUOS_TABLE)
-            
-            conn.commit()
-            print(" Estructura de tablas creada con éxito.")
-            
-        except Error as e:
-            print(f"Error al crear las tablas: {e}")
-    else:
-        print("Error: No se pudo establecer la conexión a la base de datos.")
+def insert_mission(conn, mission):
+    """Inserta una nueva misión en la tabla misiones."""
+    sql = ''' INSERT INTO misiones(nombre, localizacion, dificultad, recompensa_oro)
+              VALUES(?, ?, ?, ?) '''
+    cur = conn.cursor()
+    try:
+        cur.execute(sql, mission)
+        conn.commit()
+        print(f" Misión '{mission[0]}' insertada con ID: {cur.lastrowid}")
+        return cur.lastrowid
+    except Error as e:
+        print(f" Error al insertar misión: {e}")
+        return None
+
+def insert_monster(conn, monster):
+    """Inserta un nuevo monstruo en la tabla monstruos."""
+    sql = ''' INSERT INTO monstruos(nombre, tipo, nivel_amenaza)
+              VALUES(?, ?, ?) '''
+    cur = conn.cursor()
+    try:
+        cur.execute(sql, monster)
+        conn.commit()
+        print(f" Monstruo '{monster[0]}' insertado con ID: {cur.lastrowid}")
+        return cur.lastrowid
+    except Error as e:
+        print(f" Error al insertar monstruo: {e}")
+        return None
+
+def record_hero_participation(conn, participation):
+    """Registra la participación de un héroe en una misión (Tabla misiones_heroes)."""
+    sql = ''' INSERT INTO misiones_heroes(mision_id, heroe_id)
+              VALUES(?, ?) '''
+    cur = conn.cursor()
+    try:
+        cur.execute(sql, participation)
+        conn.commit()
+        print(f" Participación registrada: Misión ID {participation[0]} con Héroe ID {participation[1]}")
+    except Error as e:
+        print(f" Error al registrar participación: {e}")
+
+def record_monster_encounter(conn, encounter):
+    """Registra los monstruos encontrados en una misión (Tabla misiones_monstruos)."""
+    sql = ''' INSERT INTO misiones_monstruos(mision_id, monstruo_id, cantidad)
+              VALUES(?, ?, ?) '''
+    cur = conn.cursor()
+    try:
+        cur.execute(sql, encounter)
+        conn.commit()
+        print(f" Enfrentamiento registrado: Misión ID {encounter[0]} vs {encounter[2]} monstruos (ID {encounter[1]})")
+    except Error as e:
+        print(f" Error al registrar enfrentamiento: {e}")
+
+
+def select_all(conn, table_name):
+    """Consulta y muestra todos los registros de una tabla."""
+    cur = conn.cursor()
+    cur.execute(f"SELECT * FROM {table_name}")
+    rows = cur.fetchall()
+    print(f"\n--- Contenido de la tabla: {table_name} ---")
+    for row in rows:
+        print(row)
+    print("---------------------------------------")
+
+
+def demonstrate_data_entry(conn):
+    if conn is None:
+        print("No hay conexión, abortando la demostración de datos.")
+        return
+
+    print("\n\n=== 📜 INICIO DE REGISTRO DE AVENTURAS ===")
+
+    print("\n--- Insertando Héroes ---")
+    heroe_gimli_id = insert_hero(conn, ('Gimli', 'Guerrero', 5))
+    heroe_elara_id = insert_hero(conn, ('Elara', 'Mago', 8))
+    heroe_lyra_id = insert_hero(conn, ('Lyra', 'Arquero', 3))
+
+    print("\n--- Insertando Monstruos ---")
+    monstruo_goblin_id = insert_monster(conn, ('Goblin Mayor', 'Goblin', 2))
+    monstruo_dragon_id = insert_monster(conn, ('Ignis', 'Dragón', 10))
+    monstruo_esqueleto_id = insert_monster(conn, ('Esqueleto Armado', 'No-muerto', 1))
+
+    print("\n--- Insertando Misiones ---")
+    mision_cueva_id = insert_mission(conn, ('Limpiar Cueva', 'Bosque del Susurro', 'Fácil', 150))
+    mision_volcan_id = insert_mission(conn, ('Matar al Dragón', 'Monte del Destino', 'Épica', 5000))
+    mision_ruinas_id = insert_mission(conn, ('Investigar Ruinas', 'Ruinas Antiguas', 'Media', 450))
+
+
+    # Misión 1: Limpiar Cueva (Participantes: Gimli y Lyra)
+    print("\n--- Registrando Participación (Misiones_Heroes) ---")
+    record_hero_participation(conn, (mision_cueva_id, heroe_gimli_id))
+    record_hero_participation(conn, (mision_cueva_id, heroe_lyra_id))
+
+    # Misión 2: Matar al Dragón (Participante: Elara)
+    record_hero_participation(conn, (mision_volcan_id, heroe_elara_id))
+
+    # Misión 1: Limpiar Cueva (Monstruos: 5 Goblins Mayores)
+    print("\n--- Registrando Enfrentamientos (Misiones_Monstruos) ---")
+    record_monster_encounter(conn, (mision_cueva_id, monstruo_goblin_id, 5))
+
+    # Misión 2: Matar al Dragón (Monstruos: 1 Dragón Ignis)
+    record_monster_encounter(conn, (mision_volcan_id, monstruo_dragon_id, 1))
+
+    # Misión 3: Investigar Ruinas (Monstruos: 10 Esqueletos)
+    record_monster_encounter(conn, (mision_ruinas_id, monstruo_esqueleto_id, 10))
+
+    print("\n\n===  CONSULTA DE DATOS REGISTRADOS ===")
+    select_all(conn, 'heroes')
+    select_all(conn, 'misiones')
+    select_all(conn, 'monstruos')
+    select_all(conn, 'misiones_heroes')
+    select_all(conn, 'misiones_monstruos')
+
+    print("\n===  FIN DEL REGISTRO ===")
+
 
 
 def main():
-    print(f"Intentando conectar a la base de datos: {DATABASE_NAME}")
-    conn = create_connection(DATABASE_NAME)
 
-    if conn:
-        create_tables(conn)
-        conn.close()
-        print(f"Base de datos '{DATABASE_NAME}' lista para las aventuras.")
-
-    if os.path.exists(DATABASE_NAME):
-        print(f"\n¡Éxito! El archivo de la base de datos '{DATABASE_NAME}' existe.")
-    else:
-        print("\n¡Alerta! El archivo de la base de datos no fue encontrado.")
-
+    DATABASE_NAME = "gremio_aventuras.db"
+    conn = None
+    try:
+        conn = sqlite3.connect(DATABASE_NAME)
+        demonstrate_data_entry(conn)
+        
+    except Error as e:
+        print(f"Error principal: {e}")
+    finally:
+        if conn:
+            conn.close()
 
 if __name__ == '__main__':
     main()

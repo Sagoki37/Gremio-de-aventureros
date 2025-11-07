@@ -1,0 +1,103 @@
+import sqlite3
+from sqlite3 import Error
+import os
+
+DATABASE_NAME = "gremio_aventuras.db"
+
+SQL_CREATE_HEROES_TABLE = """
+CREATE TABLE IF NOT EXISTS heroes (
+    id INTEGER PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    clase TEXT NOT NULL,
+    nivel_experiencia INTEGER NOT NULL CHECK (nivel_experiencia >= 1)
+);
+"""
+
+SQL_CREATE_MISIONES_TABLE = """
+CREATE TABLE IF NOT EXISTS misiones (
+    id INTEGER PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    localizacion TEXT NOT NULL,
+    dificultad TEXT NOT NULL CHECK (dificultad IN ('Fácil', 'Media', 'Difícil', 'Épica')),
+    recompensa_oro INTEGER NOT NULL CHECK (recompensa_oro >= 0)
+);
+"""
+
+SQL_CREATE_MONSTRUOS_TABLE = """
+CREATE TABLE IF NOT EXISTS monstruos (
+    id INTEGER PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    tipo TEXT NOT NULL,
+    nivel_amenaza INTEGER NOT NULL CHECK (nivel_amenaza BETWEEN 1 AND 10)
+);
+"""
+
+SQL_CREATE_MISIONES_HEROES_TABLE = """
+CREATE TABLE IF NOT EXISTS misiones_heroes (
+    mision_id INTEGER NOT NULL,
+    heroe_id INTEGER NOT NULL,
+    PRIMARY KEY (mision_id, heroe_id),
+    FOREIGN KEY (mision_id) REFERENCES misiones (id) ON DELETE CASCADE,
+    FOREIGN KEY (heroe_id) REFERENCES heroes (id) ON DELETE CASCADE
+);
+"""
+
+SQL_CREATE_MISIONES_MONSTRUOS_TABLE = """
+CREATE TABLE IF NOT EXISTS misiones_monstruos (
+    mision_id INTEGER NOT NULL,
+    monstruo_id INTEGER NOT NULL,
+    cantidad INTEGER NOT NULL CHECK (cantidad >= 1),
+    PRIMARY KEY (mision_id, monstruo_id),
+    FOREIGN KEY (mision_id) REFERENCES misiones (id) ON DELETE CASCADE,
+    FOREIGN KEY (monstruo_id) REFERENCES monstruos (id) ON DELETE CASCADE
+);
+"""
+
+def create_connection(db_file):
+    """Crea una conexión a la base de datos SQLite especificada."""
+    conn = None
+    try:
+        conn = sqlite3.connect(db_file)
+        return conn
+    except Error as e:
+        print(f"Error al conectar a SQLite: {e}")
+        return None
+
+def create_tables(conn):
+    """Crea todas las tablas utilizando las sentencias SQL definidas."""
+    if conn is not None:
+        try:
+            cursor = conn.cursor()
+            
+            cursor.execute(SQL_CREATE_HEROES_TABLE)
+            cursor.execute(SQL_CREATE_MISIONES_TABLE)
+            cursor.execute(SQL_CREATE_MONSTRUOS_TABLE)
+            cursor.execute(SQL_CREATE_MISIONES_HEROES_TABLE)
+            cursor.execute(SQL_CREATE_MISIONES_MONSTRUOS_TABLE)
+            
+            conn.commit()
+            print(" Estructura de tablas creada con éxito.")
+            
+        except Error as e:
+            print(f"Error al crear las tablas: {e}")
+    else:
+        print("Error: No se pudo establecer la conexión a la base de datos.")
+
+
+def main():
+    print(f"Intentando conectar a la base de datos: {DATABASE_NAME}")
+    conn = create_connection(DATABASE_NAME)
+
+    if conn:
+        create_tables(conn)
+        conn.close()
+        print(f"Base de datos '{DATABASE_NAME}' lista para las aventuras.")
+
+    if os.path.exists(DATABASE_NAME):
+        print(f"\n¡Éxito! El archivo de la base de datos '{DATABASE_NAME}' existe.")
+    else:
+        print("\n¡Alerta! El archivo de la base de datos no fue encontrado.")
+
+
+if __name__ == '__main__':
+    main()
